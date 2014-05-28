@@ -101,7 +101,7 @@ signed char Packet::readInt8()
 
 short int Packet::readInt16()
 {
-  short int netValue = *(int*)(this->head);
+  short int netValue = *(short int*)(this->head);
   short int hostValue = ntohs(netValue);
   this->head += sizeof(short int);
   D(cout.flush() << "Packet::readInt16():netValue(" << netValue << "):hostValue(" << hostValue << ")\n";)
