@@ -39,7 +39,6 @@ using namespace std;
 
 namespace LibKafka {
 
-const int Connection::DEFAULT_BUFFER_SIZE;
 const int Connection::SOCKET_UNINITIALIZED;
 const int Connection::OPEN_CONNECTION_ERROR;
 const int Connection::READ_ERROR;

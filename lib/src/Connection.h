@@ -38,7 +38,6 @@ class Connection
 {
   public:
 
-    static const int DEFAULT_BUFFER_SIZE = 1024;
     static const int SOCKET_UNINITIALIZED = -1;
     static const int OPEN_CONNECTION_ERROR = -1;
     static const int READ_ERROR = -1;
