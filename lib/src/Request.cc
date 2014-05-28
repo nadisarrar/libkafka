@@ -60,7 +60,7 @@ Request::Request(short int apiKey, short int apiVersion, int correlationId, stri
 
 unsigned char* Request::toWireFormat(bool updatePacketSize)
 {
-  unsigned char* buffer = this->RequestOrResponse::toWireFormat(false);
+  this->RequestOrResponse::toWireFormat(false);
 
   D(cout.flush() << "--------------Request::toWireFormat()\n";)
 
@@ -77,7 +77,7 @@ unsigned char* Request::toWireFormat(bool updatePacketSize)
   this->packet->writeString(this->clientId);
 
   if (updatePacketSize) this->packet->updatePacketSize();
-  return buffer;
+  return this->packet->getBuffer();
 }
 
 int Request::getWireFormatSize(bool includePacketSize)

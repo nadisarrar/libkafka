@@ -98,15 +98,15 @@ unsigned char* MessageSet::toWireFormat(bool updatePacketSize)
     this->packet->writeInt64((*message)->offset);
 
     // Kafka Protocol: int messageSize (allow for Message size changes due to compression)
-    unsigned char *messageSizeField;
-    if ((*message)->hasCompression()) messageSizeField = this->packet->getHead();
+    int messageSizeFieldOffset;
+    if ((*message)->hasCompression()) messageSizeFieldOffset = this->packet->getHeadOffset();
     this->packet->writeInt32((*message)->getWireFormatSize(false));
     (*message)->packet = this->packet;
     (*message)->toWireFormat(false);
     if ((*message)->hasCompression())
     {
       D(cout.flush() << "--------------MessageSet::toWireFormat():updating messageSize field for compression\n";)
-      this->packet->updateInt32((*message)->getWireFormatSize(false), messageSizeField);
+      this->packet->updateInt32((*message)->getWireFormatSize(false), messageSizeFieldOffset);
     }
   }
 

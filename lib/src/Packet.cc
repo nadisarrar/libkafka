@@ -38,30 +38,42 @@ using namespace std;
 
 namespace LibKafka {
 
-const int Packet::DEFAULT_BUFFER_SIZE;
-
 // Constructor to parse incoming Kafka protocol packet
-Packet::Packet(unsigned char *buffer, bool releaseBuffer) : WireFormatter()
+Packet::Packet(unsigned char *buffer_, bool releaseBuffer) : WireFormatter()
 {
   D(cout.flush() << "--------------Packet(incoming)\n";)
 
-  this->buffer = buffer;
-  this->head = buffer;
+  int bufsize = ntohl(*(int *)buffer_);
+  prepareBuffer(bufsize + sizeof(int), true);
+  memcpy(head, buffer_, bufsize + sizeof(int));
   this->size = readInt32() + sizeof(int); // protocol size field is exclusive of size field length, size instance variable is inclusive of size field length
-  this->releaseBuffer = releaseBuffer;
+  if (releaseBuffer) delete[] buffer_;
 }
 
 // Constructor to construct outgoing Kafka protocol packet
-Packet::Packet(int bufferSize) : WireFormatter()
+Packet::Packet() : WireFormatter()
 {
   D(cout.flush() << "--------------Packet(outgoing)\n";)
 
-  buffer = new unsigned char[bufferSize];
-  head = buffer;
+  prepareBuffer(0, true);
   this->size = 0;
   writeInt32(this->size);
+}
 
-  this->releaseBuffer = true;
+void Packet::prepareBuffer(int size, bool initial)
+{
+  dynbuf.resize(size);
+  int len = initial ? 0 : head - buffer;
+  buffer = &dynbuf[0];
+  head = buffer + len;
+}
+
+void Packet::growBuffer(int bytes)
+{
+  std::vector<char>::size_type currsize = dynbuf.size();
+  std::vector<char>::size_type targetsize = bytes + (head - buffer);
+  if (targetsize > currsize)
+    prepareBuffer(targetsize, false);
 }
 
 int Packet::getWireFormatSize(bool includeSize)
@@ -78,8 +90,6 @@ int Packet::getWireFormatSize(bool includeSize)
 Packet::~Packet()
 {
   D(cout.flush() << "--------------~Packet()\n";)
-
-  if (releaseBuffer) delete[] buffer;
 }
 
 unsigned char* Packet::toWireFormat(bool updateSize)
@@ -148,6 +158,7 @@ unsigned char* Packet::readBytes(int numBytes)
 void Packet::updatePacketSize()
 {
   int netValue = htonl((this->size) - sizeof(int)); // prior to sending, set packetSize exclusive of size (int)
+  growBuffer(sizeof(int));
   memcpy(buffer, &netValue, sizeof(int));
   D(cout.flush() << "Packet::updatePacketSize():hostValue(" << this->size << "):netValue(" << netValue << ")\n";)
 }
@@ -155,6 +166,7 @@ void Packet::updatePacketSize()
 void Packet::writeInt8(signed char hostValue)
 {
   // netValue == hostValue for single bytes
+  growBuffer(sizeof(signed char));
   memcpy(head, &hostValue, sizeof(signed char));
   head += sizeof(signed char);
   this->size += sizeof(signed char);
@@ -164,6 +176,7 @@ void Packet::writeInt8(signed char hostValue)
 void Packet::writeInt16(short int hostValue)
 {
   short int netValue = htons(hostValue);
+  growBuffer(sizeof(short int));
   memcpy(head, &netValue, sizeof(short int));
   head += sizeof(short int);
   this->size += sizeof(short int);
@@ -173,23 +186,30 @@ void Packet::writeInt16(short int hostValue)
 void Packet::writeInt32(int hostValue)
 {
   int netValue = htonl(hostValue);
+  growBuffer(sizeof(int));
   memcpy(head, &netValue, sizeof(int));
   head += sizeof(int);
   this->size += sizeof(int);
   D(cout.flush() << "Packet::writeInt32():hostValue(" << hostValue << "):netValue(" << netValue << ")\n";)
 }
 
-void Packet::updateInt32(int hostValue, unsigned char *bufferPointer)
+void Packet::updateInt32(int hostValue, int offset)
 {
   // Assumption: for retroactive updates to previously wtitten fields within the Packet, using value from getHead() prior to initial write
   int netValue = htonl(hostValue);
-  memcpy(bufferPointer, &netValue, sizeof(int));
+  if (offset > (dynbuf.capacity() - sizeof(int)))
+  {
+    E("Packet::updateInt32():hostValue(" << hostValue << "):netValue(" << netValue << ") at invalid offset " << offset << "\n";)
+    return;
+  }
+  memcpy(buffer + offset, &netValue, sizeof(int));
   D(cout.flush() << "Packet::updateInt32():hostValue(" << hostValue << "):netValue(" << netValue << ")\n";)
 }
 
 void Packet::writeInt64(long int hostValue)
 {
   long int netValue = htonll(hostValue);
+  growBuffer(sizeof(long int));
   memcpy(head, &netValue, sizeof(long int));
   head += sizeof(long int);
   this->size += sizeof(long int);
@@ -200,6 +220,7 @@ void Packet::writeString(string value)
 {
   short int length = value.length();
   writeInt16(length);
+  growBuffer(length);
   memcpy(head, value.c_str(), length);
   head += length;
   this->size += length;
@@ -214,6 +235,7 @@ void Packet::writeBytes(unsigned char* bytes, int numBytes)
   this->writeInt32(numBytes);
   if (numBytes > 0)
   {
+    growBuffer(numBytes);
     memcpy(head, bytes, numBytes);
     head += numBytes;
     this->size += numBytes;
@@ -300,24 +322,24 @@ int Packet::getSize(bool includeProtocolSizeFieldLength)
 // The CRC32 functions make the following assumptions:
 // 1 - head is pointing to an int32 crc field when beginCRC32() is called
 // 2 - head is incremented past the crc field, and the next N bytes (to be CRC32'd) are written
-// 3 - when endCRC32() is called, N bytes (this->head - this->crcHead) are CRC32'd, and the result written to the intial crc field (this->crcHead - sizeof(crc))
+// 3 - when endCRC32() is called, N bytes (this->buffer + this->crcHeadOffset) are CRC32'd, and the result written to the intial crc field ((this->buffer + this->crcHeadOffset) - sizeof(crc))
 // 4 - the functions can't be used concurrently
 void Packet::beginCRC32()
 {
   D(cout.flush() << "Packet::beginCRC32()\n";)
   this->writeInt32(0); // will be updated @ endCRC32()
-  this->crcHead = this->head;
+  this->crcHeadOffset = this->getHeadOffset();
 }
 
 int Packet::endCRC32()
 {
   D(cout.flush() << "Packet::endCRC32()\n";)
   
-  int crcLength = this->head - this->crcHead;
+  int crcLength = this->head - (this->buffer + this->crcHeadOffset);
   D(cout.flush() << "Packet::endCRC32():crcLength:" << crcLength << "\n";)
 
   uLong initCrc = crc32(0L, Z_NULL, 0);
-  uLong crc = crc32(initCrc, this->crcHead, crcLength);
+  uLong crc = crc32(initCrc, this->buffer + this->crcHeadOffset, crcLength);
   if (crc == initCrc)
   {
     E("Packet::endCRC32():error:updated crc matches initial (null) crc\n");
@@ -326,12 +348,17 @@ int Packet::endCRC32()
   D(cout.flush() << "Packet::endCRC32():unsigned crc:" << crc << "\n";)
   int signedCrc = (int)crc;
   D(cout.flush() << "Packet::endCRC32():signed crc:" << signedCrc << "\n";)
-  this->updateInt32(signedCrc, this->crcHead - sizeof(int));
+  this->updateInt32(signedCrc, this->crcHeadOffset - sizeof(int));
   return signedCrc;
 }
 
 void Packet::seek(int numBytes)
 {
+  if ((this->getHeadOffset() + numBytes) >= dynbuf.size())
+  {
+    E("Packet::seek():error: seek out of range:" << numBytes << "\n");
+    return;
+  }
   this->head += numBytes;
 }
 

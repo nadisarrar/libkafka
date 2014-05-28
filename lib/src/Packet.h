@@ -27,6 +27,7 @@
 #define PACKET_H
 
 #include <string>
+#include <vector>
 #include "Debug.h"
 #include "WireFormatter.h"
 
@@ -36,16 +37,14 @@ class Packet : public WireFormatter
 {
   public:
 
-    static const int DEFAULT_BUFFER_SIZE = 1024;
-
     enum CompressionType { COMPRESSION_GZIP, COMPRESSION_SNAPPY };
 
-    Packet(int bufferSize = DEFAULT_BUFFER_SIZE);
+    Packet();
     Packet(unsigned char *buffer, bool releaseBuffer = false);
     ~Packet();
 
     unsigned char *getBuffer() { return this->buffer; }
-    unsigned char *getHead() { return this->head; }
+    int getHeadOffset() { return this->head - this->buffer; }
 
     signed char readInt8();
     short int readInt16();
@@ -57,7 +56,7 @@ class Packet : public WireFormatter
     void writeInt8(signed char value);
     void writeInt16(short int value);
     void writeInt32(int value);
-    void updateInt32(int value, unsigned char *bufferPointer);
+    void updateInt32(int value, int offset);
     void writeInt64(long int value);
     void writeString(std::string value);
 
@@ -81,18 +80,18 @@ class Packet : public WireFormatter
     int getWireFormatSize(bool includeSize = false);
 
   protected:
-    
+
+    void prepareBuffer(int size, bool initial);
+    void growBuffer(int bytes);
+
     int size; // size of packet, inclusive of initial protocol size int32 value
+
+    std::vector<unsigned char> dynbuf;
 
     unsigned char *buffer;
     unsigned char *head;
 
-    unsigned char *crcField;
-    unsigned char *crcHead;
-
-  private:
-
-    bool releaseBuffer;
+    int crcHeadOffset;
 };
 
 }; // namespace LibKafka

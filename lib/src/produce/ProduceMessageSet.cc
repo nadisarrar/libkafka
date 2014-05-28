@@ -76,8 +76,8 @@ unsigned char* ProduceMessageSet::toWireFormat(bool updatePacketSize)
   this->packet->writeInt32(this->partition);
 
   // Kafka Protocol: int messageSetSize (allow for MessageSet size chanages due to compression)
-  unsigned char *messageSetSizeField;
-  if (this->hasCompression) messageSetSizeField = this->packet->getHead();
+  int messageSetSizeFieldOffset;
+  if (this->hasCompression) messageSetSizeFieldOffset = this->packet->getHeadOffset();
   this->packet->writeInt32(this->messageSetSize);
 
   // Kafka Protocol: MessageSet messageSet
@@ -87,7 +87,7 @@ unsigned char* ProduceMessageSet::toWireFormat(bool updatePacketSize)
   if (this->hasCompression)
   {
     D(cout.flush() << "--------------ProduceMessageSet::toWireFormat():updating messageSetSize field for compression\n";)
-    this->packet->updateInt32(this->messageSet->getWireFormatSize(false), messageSetSizeField);
+    this->packet->updateInt32(this->messageSet->getWireFormatSize(false), messageSetSizeFieldOffset);
   }
 
   if (updatePacketSize) this->packet->updatePacketSize();

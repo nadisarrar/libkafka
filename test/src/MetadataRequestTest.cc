@@ -44,11 +44,15 @@ namespace {
     MetadataRequest *mr1 = createMetadataRequest();
     EXPECT_NE(mr1, (void*)0);
     unsigned char * message = mr1->toWireFormat();
+    unsigned char * buffer = mr1->packet->getBuffer();
+    EXPECT_EQ(message, buffer);
     int size = mr1->getWireFormatSize(true);
+    buffer = mr1->packet->getBuffer();
+    EXPECT_EQ(message, buffer);
     EXPECT_EQ(mr1->size(), size);
 
     MetadataRequest *mr2 = new MetadataRequest(message);
-
+    
     EXPECT_NE(mr2, (void*)0);
     EXPECT_EQ(mr2->size(), mr1->size());
     EXPECT_EQ(mr2->apiKey, mr1->apiKey);

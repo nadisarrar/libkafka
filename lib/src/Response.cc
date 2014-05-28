@@ -49,7 +49,7 @@ Response::Response(int correlationId) : RequestOrResponse()
 
 unsigned char* Response::toWireFormat(bool updatePacketSize)
 {
-  unsigned char* buffer = this->RequestOrResponse::toWireFormat(false);
+  this->RequestOrResponse::toWireFormat(false);
 
   D(cout.flush() << "--------------Response::toWireFormat()\n";)
 
@@ -57,7 +57,7 @@ unsigned char* Response::toWireFormat(bool updatePacketSize)
   this->packet->writeInt32(this->correlationId);
 
   if (updatePacketSize) this->packet->updatePacketSize();
-  return buffer;
+  return this->packet->getBuffer();
 }
 
 int Response::getWireFormatSize(bool includePacketSize)

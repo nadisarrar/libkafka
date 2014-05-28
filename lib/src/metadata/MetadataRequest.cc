@@ -65,7 +65,7 @@ MetadataRequest::~MetadataRequest()
 
 unsigned char* MetadataRequest::toWireFormat(bool updatePacketSize)
 {
-  unsigned char* buffer = this->Request::toWireFormat(false);
+  this->Request::toWireFormat(false);
 
   D(cout.flush() << "--------------MetadataRequest::toWireFormat()\n";)
 
@@ -76,7 +76,7 @@ unsigned char* MetadataRequest::toWireFormat(bool updatePacketSize)
   }
 
   if (updatePacketSize) this->packet->updatePacketSize();
-  return buffer;
+  return this->packet->getBuffer();
 }
 
 int MetadataRequest::getWireFormatSize(bool includePacketSize)

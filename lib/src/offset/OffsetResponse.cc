@@ -68,7 +68,7 @@ OffsetResponse::~OffsetResponse()
 
 unsigned char* OffsetResponse::toWireFormat(bool updatePacketSize)
 {
-  unsigned char* buffer = this->Response::toWireFormat(false);
+  this->Response::toWireFormat(false);
 
   D(cout.flush() << "--------------OffsetResponse::toWireFormat()\n";)
 
@@ -80,7 +80,7 @@ unsigned char* OffsetResponse::toWireFormat(bool updatePacketSize)
   }
 
   if (updatePacketSize) this->packet->updatePacketSize();
-  return buffer;
+  return this->packet->getBuffer();
 }
 
 int OffsetResponse::getWireFormatSize(bool includePacketSize)

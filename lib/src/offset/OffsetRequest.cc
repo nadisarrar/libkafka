@@ -71,7 +71,7 @@ namespace LibKafka {
 
   unsigned char* OffsetRequest::toWireFormat(bool updatePacketSize)
   {
-    unsigned char* buffer = this->Request::toWireFormat(false);
+    this->Request::toWireFormat(false);
 
     D(cout.flush() << "--------------OffsetRequest::toWireFormat()\n";)
     
@@ -86,7 +86,7 @@ namespace LibKafka {
     }
 
     if (updatePacketSize) this->packet->updatePacketSize();
-    return buffer;
+    return this->packet->getBuffer();
   }
 
   int OffsetRequest::getWireFormatSize(bool includePacketSize)

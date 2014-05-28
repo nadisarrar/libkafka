@@ -25,6 +25,7 @@
 
 #include <string>
 #include <gtest/gtest.h>
+#include <arpa/inet.h>
 #include "BaseTest.h"
 
 namespace {
@@ -52,6 +53,8 @@ namespace {
     message = pr1->toWireFormat();
     int size = pr1->getWireFormatSize(true);
     EXPECT_EQ(pr1->size(), size);
+    int raw_size = ntohl(*(int*)message);
+    EXPECT_EQ(raw_size + 4, size);
     delete pr1;
   }
   

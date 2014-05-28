@@ -60,9 +60,8 @@ unsigned char* RequestOrResponse::toWireFormat(bool updatePacketSize)
   D(cout.flush() << "--------------RequestOrResponse::toWireFormat()\n";)
 
   // Kafka Protocol: int32 size - managed within the Packet class
-  unsigned char *buffer = this->packet->toWireFormat(false);
-  if (updatePacketSize) this->packet->updatePacketSize();
-  return buffer;
+  this->packet->toWireFormat(updatePacketSize);
+  return this->packet->getBuffer();
 }
 
 int RequestOrResponse::getWireFormatSize(bool includePacketSize)

@@ -82,7 +82,7 @@ MetadataResponse::~MetadataResponse()
 
 unsigned char* MetadataResponse::toWireFormat(bool updatePacketSize)
 {
-  unsigned char* buffer = this->Response::toWireFormat(false);
+  this->Response::toWireFormat(false);
 
   D(cout.flush() << "--------------MetadataResponse::toWireFormat()\n";)
 
@@ -101,7 +101,7 @@ unsigned char* MetadataResponse::toWireFormat(bool updatePacketSize)
   }
 
   if (updatePacketSize) this->packet->updatePacketSize();
-  return buffer;
+  return this->packet->getBuffer();
 }
 
 int MetadataResponse::getWireFormatSize(bool includePacketSize)

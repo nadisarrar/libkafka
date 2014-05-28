@@ -68,7 +68,7 @@ ProduceResponse::~ProduceResponse()
 
 unsigned char* ProduceResponse::toWireFormat(bool updatePacketSize)
 {
-  unsigned char* buffer = this->Response::toWireFormat(false);
+  this->Response::toWireFormat(false);
 
   D(cout.flush() << "--------------ProduceResponse::toWireFormat()\n";)
 
@@ -80,7 +80,7 @@ unsigned char* ProduceResponse::toWireFormat(bool updatePacketSize)
   }
 
   if (updatePacketSize) this->packet->updatePacketSize();
-  return buffer;
+  return this->packet->getBuffer();
 }
 
 int ProduceResponse::getWireFormatSize(bool includePacketSize)
