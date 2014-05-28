@@ -138,9 +138,9 @@ string Packet::readString()
 unsigned char* Packet::readBytes(int numBytes)
 {
   // returns a pointer to the bytes within the Packet buffer, and increments head
-  if (numBytes < 0) return this->head; // fix for issue 1, reported by zicfyy@gmail.com
   unsigned char* bytes = this->head;
-  this->head += numBytes;
+  if (numBytes > 0)
+    this->head += numBytes;
   D(cout.flush() << "Packet::readBytes():" << numBytes << "\n";)
   return bytes;
 }
@@ -212,9 +212,12 @@ void Packet::writeString(string value)
 void Packet::writeBytes(unsigned char* bytes, int numBytes)
 {
   this->writeInt32(numBytes);
-  memcpy(head, bytes, numBytes);
-  head += numBytes;
-  this->size += numBytes;
+  if (numBytes > 0)
+  {
+    memcpy(head, bytes, numBytes);
+    head += numBytes;
+    this->size += numBytes;
+  }
   D(cout.flush() << "Packet::writeBytes():" << numBytes << "\n";)
 }
 

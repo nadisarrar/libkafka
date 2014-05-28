@@ -84,8 +84,9 @@ Message::~Message()
 
   if (this->releaseArrays)
   {
-    D(cout.flush() << "--------------~Message():deleting key/value:" << this->key << ":" << this->value << "\n";)
-    delete[] this->key;
+    D(cout.flush() << "--------------~Message():deleting key/value:" << (this->keyLength > 0 ? this->key : "") << ":" << this->value << "\n";)
+    if (this->keyLength > 0)
+      delete[] this->key;
     delete[] this->value;
   }
 }
@@ -153,7 +154,7 @@ int Message::getWireFormatSize(bool includePacketSize)
   int size = 0;
   if (includePacketSize) size += sizeof(int);
   size += sizeof(int) + sizeof(signed char) + sizeof(signed char);
-  size += sizeof(int) + this->keyLength;
+  size += sizeof(int) + (this->keyLength < 0 ? 0 : this->keyLength);
   size += sizeof(int) + this->valueLength;
   if (this->compressedValueLength > 0) size += (this->compressedValueLength - this->valueLength);
   return size;
