@@ -84,7 +84,7 @@ Message::~Message()
 
   if (this->releaseArrays)
   {
-    D(cout.flush() << "--------------~Message():deleting key/value:" << (this->keyLength > 0 ? this->key : "") << ":" << this->value << "\n";)
+    D(cout.flush() << "--------------~Message():deleting key/value:" << (this->keyLength > 0 ? (char*)this->key : "") << ":" << this->value << "\n";)
     if (this->keyLength > 0)
       delete[] this->key;
     delete[] this->value;
