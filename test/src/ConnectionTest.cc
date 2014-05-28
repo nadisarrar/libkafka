@@ -50,8 +50,8 @@ namespace {
     int length = request.length();
     int numBytesSent = c->write(length, (unsigned char*)(request.c_str()));
     EXPECT_EQ(numBytesSent, length);
-    unsigned char* buffer = new unsigned char[1024];
-    int numBytesReceived = c->read(1024, buffer);
+    unsigned char* buffer = new unsigned char[16];
+    int numBytesReceived = c->read(16, buffer);
     EXPECT_GT(numBytesReceived, 0);
     cout << *c;
 
