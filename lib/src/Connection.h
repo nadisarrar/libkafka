@@ -30,6 +30,7 @@
 #include <string>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <stdexcept>
 #include "Debug.h"
 
 namespace LibKafka {
@@ -38,8 +39,12 @@ class Connection
 {
   public:
 
+    class ConnectionException : public std::runtime_error { using std::runtime_error::runtime_error; };
+    class ConnectionOpenException : public ConnectionException { using ConnectionException::ConnectionException; };
+    class ConnectionReadException : public ConnectionException { using ConnectionException::ConnectionException; };
+    class ConnectionWriteException : public ConnectionException { using ConnectionException::ConnectionException; };
+
     static const int SOCKET_UNINITIALIZED = -1;
-    static const int OPEN_CONNECTION_ERROR = -1;
     static const int READ_ERROR = -1;
     static const int WRITE_ERROR = -1;
 

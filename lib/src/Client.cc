@@ -81,23 +81,13 @@ ResponseClass *Client::apiCall(RequestClass *request)
 {
   D(cout.flush() << "--------------Client::apiCall():" << typeid(RequestClass).name() << "\n";)
 
-  if (!this->prepareConnection()) { E("Client::apiCall():unable to create connection"); return NULL; }
+  this->prepareConnection(); // returns true or throws an exception
 
-  int status = this->sendRequest(request);
-  if (status == Connection::WRITE_ERROR)
-  {
-    E("Client::apiCall():sendRequest() error:" << strerror(errno) << "\n");
-    return NULL;
-  }
+  this->sendRequest(request); // throws an exception on error
 
   D(cout.flush() << "Client::apiCall:" << typeid(RequestClass).name() << " sent:\n" << *request;)
 
   ResponseClass *response = this->receiveResponse<ResponseClass>();
-  if (response == NULL)
-  {
-    E("Client::apiCall():receiveResponse() error:" << strerror(errno) << "\n");
-    return NULL;
-  }
 
   D(cout.flush() << "Client::apiCall:" << typeid(ResponseClass).name() << " received:\n" << *response;)
   return response;
@@ -108,11 +98,10 @@ int Client::sendRequest(Request *request)
   D(cout.flush() << "--------------Client::sendRequest()\n";)
   D(cout.flush() << "Request:\n" << *request;)
     
-  if (!this->prepareConnection()) { E("Client::sendRequest():unable to create connection"); return Connection::OPEN_CONNECTION_ERROR; }
+  this->prepareConnection(); // returns true or throws an exception
 
   unsigned char *buffer = request->toWireFormat();
   int numBytesSent = this->connection->write(request->size(), buffer);
-  if (numBytesSent == Connection::WRITE_ERROR) { E("Client::sendRequest():write error:" << strerror(errno) << "\n"); return numBytesSent; }
   D(cout.flush() << "Client::sendRequest():request sent:numBytes:" << numBytesSent << "\n";)
   return numBytesSent;
 }
@@ -122,17 +111,15 @@ ResponseClass *Client::receiveResponse()
 {
   D(cout.flush() << "--------------Client::receiveResponse()\n";)
   
-  if (!this->prepareConnection()) { E("Client::receiveResponse():unable to create connection"); return NULL; }
+  this->prepareConnection(); // returns true or throws an exception
 
   int netValueSize = -1;
   int numBytesReceived = this->connection->read(sizeof(int), (unsigned char *)(&netValueSize));
-  if (numBytesReceived == Connection::READ_ERROR) { E("Client::receiveResponse():read error on size:" << strerror(errno) << "\n"); return NULL; }
   int hostValueSize = ntohl(netValueSize);
   D(cout.flush() << "Client::receiveResponse():incoming response:size:" << hostValueSize << "\n";)
   unsigned char *buffer = new unsigned char[hostValueSize+sizeof(int)]; // add space for int32 size
   memcpy(buffer, &netValueSize, sizeof(int));
   numBytesReceived = this->connection->read(hostValueSize, buffer + sizeof(int));
-  if (numBytesReceived == Connection::READ_ERROR) { E("Client::receiveResponse():read error on body:" << strerror(errno) << "\n"); return NULL; }
   return new ResponseClass(buffer, true); // true specfies delete buffer on ~Response()
 }
 
@@ -140,7 +127,7 @@ bool Client::prepareConnection()
 {
   if (this->connection != NULL) return true;
   connection = new Connection(this->brokerHost, this->brokerPort);
-  if (connection->open() < 0) { E("Client::prepareConnection():connection->open() failed\n"); return false; }
+  connection->open(); // returns true or throws an exception
   return true;
 }
 

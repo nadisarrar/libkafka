@@ -40,7 +40,6 @@ using namespace std;
 namespace LibKafka {
 
 const int Connection::SOCKET_UNINITIALIZED;
-const int Connection::OPEN_CONNECTION_ERROR;
 const int Connection::READ_ERROR;
 const int Connection::WRITE_ERROR;
 
@@ -75,19 +74,12 @@ int Connection::open()
   D(cout.flush() << "--------------Connection::open():getaddrinfo\n";)
     status = getaddrinfo(host.c_str(), portString.c_str(), &(this->host_info), &(this->host_info_list));
   if (status != 0)
-  {
-    E("Connect::open():getaddrinfo error:" << gai_strerror(status) << "\n");
-    return OPEN_CONNECTION_ERROR;
-  }
+    throw ConnectionOpenException((std::string)"Connect::open():getaddrinfo error: " + gai_strerror(status));
 
   D(cout.flush() << "--------------Connection::open():socket\n";)
   this->socketFd = socket(this->host_info_list->ai_family, this->host_info_list->ai_socktype, this->host_info_list->ai_protocol);
   if (socketFd == -1)
-  {
-
-    E("Connection::open():socket error:" << strerror(errno) << "\n");
-    return OPEN_CONNECTION_ERROR;
-  }
+    throw ConnectionOpenException((std::string)"Connection::open():socket error: " + strerror(errno));
 
   struct timeval  timeout;
   timeout.tv_sec = 10;
@@ -100,10 +92,7 @@ int Connection::open()
   D(cout.flush() << "--------------Connection::open():connect\n";)
   status = connect(socketFd, this->host_info_list->ai_addr, this->host_info_list->ai_addrlen);
   if ((status == -1) && (errno != EINPROGRESS))
-  {
-    E("Connection::open():open error:" << strerror(errno) << "\n");
-    return OPEN_CONNECTION_ERROR;
-  }
+    throw ConnectionOpenException((std::string)"Connection::open():open error: " + strerror(errno));
 
   status = select(this->socketFd+1, NULL, &set, NULL, &timeout);
   fcntl(this->socketFd, F_SETFL, fcntl(this->socketFd, F_GETFL, 0) & ~O_NONBLOCK);
@@ -140,7 +129,8 @@ int Connection::read(int numBytes, unsigned char* buffer)
   while (numBytesReceived < numBytes)
   {
     int rcvd = (int)::recv(this->socketFd, p, (size_t)(numBytes-numBytesReceived), flags);
-    if (rcvd == READ_ERROR) { E("Connection::read():error:" << strerror(errno) << "\n"); break; }
+    if (rcvd == READ_ERROR)
+      throw ConnectionReadException((std::string)"Connection::read():error: " + strerror(errno));
     p += rcvd;
     numBytesReceived += rcvd;
     D(cout.flush() << "--------------Connection::read(" << numBytes << "):read " << rcvd << " bytes\n";)
@@ -156,7 +146,8 @@ int Connection::write(int numBytes, unsigned char* buffer)
 
     int flags = 0;
   int numBytesSent = (int)::send(this->socketFd, (const void*)buffer, (ssize_t)numBytes, flags);
-  if (numBytesSent == WRITE_ERROR) { E("Connection::write():error:" << strerror(errno) << "\n"); }
+  if (numBytesSent == WRITE_ERROR)
+    throw ConnectionWriteException((std::string)"Connection::write():error: " + strerror(errno));
   D(cout.flush() << "--------------Connection::write(" << numBytes << "):wrote " << numBytesSent << "bytes\n";)
     return numBytesSent;
 }

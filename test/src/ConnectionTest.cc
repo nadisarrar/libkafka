@@ -45,7 +45,6 @@ namespace {
     Connection *c = new Connection(TestConfig::CONNECTION_HTTP_HOST, TestConfig::CONNECTION_HTTP_PORT);
     EXPECT_NE(c, (void*)0);
     int status = c->open();
-    EXPECT_NE(status, Connection::OPEN_CONNECTION_ERROR);
     string request = "GET / HTTP/1.1\nhost: www.google.com\n\n";
     int length = request.length();
     int numBytesSent = c->write(length, (unsigned char*)(request.c_str()));
