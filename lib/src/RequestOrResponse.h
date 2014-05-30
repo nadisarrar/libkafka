@@ -40,7 +40,7 @@ class RequestOrResponse : public WireFormatter, public PacketWriter
 
     RequestOrResponse();
     RequestOrResponse(unsigned char *buffer, bool releaseBuffer = false);
-    ~RequestOrResponse();
+    virtual ~RequestOrResponse();
 
     int size(bool includeProtocolSizeFieldLength = true) const;
 
