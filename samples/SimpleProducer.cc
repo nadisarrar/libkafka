@@ -46,7 +46,7 @@ ProduceRequest* createProduceRequest(string topic_name, Message **messageArray, 
 
 main()
 {
-  const char *hostname = "<your kafka deployment hostname here>";
+  const char *hostname = "localhost";
   const int port = 9092;
   const char *topic_name = "test_topic";
   const char *message_string = "This is a test message.";
