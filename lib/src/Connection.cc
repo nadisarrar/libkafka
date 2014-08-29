@@ -95,7 +95,22 @@ int Connection::open()
     throw ConnectionOpenException((std::string)"Connection::open():open error: " + strerror(errno));
 
   status = select(this->socketFd+1, NULL, &set, NULL, &timeout);
+  if (status != 1)
+  {
+    if (status == 0)
+      throw ConnectionOpenException((std::string)"Connection::open(): Connection timed out");
+    else
+      throw ConnectionOpenException((std::string)"Connection::open():select error: " + strerror(errno));
+  }
   fcntl(this->socketFd, F_SETFL, fcntl(this->socketFd, F_GETFL, 0) & ~O_NONBLOCK);
+
+  struct timeval tv;
+  tv.tv_sec = 30;
+  tv.tv_usec = 0;
+  if (setsockopt(this->socketFd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(struct timeval)) < 0)
+    throw ConnectionOpenException((std::string)"Connection::open():setsockopt1 error: " + strerror(errno));
+  if (setsockopt(this->socketFd, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv, sizeof(struct timeval)) < 0)
+    throw ConnectionOpenException((std::string)"Connection::open():setsockopt2 error: " + strerror(errno));
 
   D(cout.flush() << "--------------Connection::open():connected\n";)
   return this->socketFd;
@@ -131,6 +146,8 @@ int Connection::read(int numBytes, unsigned char* buffer)
     int rcvd = (int)::recv(this->socketFd, p, (size_t)(numBytes-numBytesReceived), flags);
     if (rcvd == READ_ERROR)
       throw ConnectionReadException((std::string)"Connection::read():error: " + strerror(errno));
+    if (rcvd == 0)
+      throw ConnectionReadException((std::string)"Connection::read(): Connection closed");
     p += rcvd;
     numBytesReceived += rcvd;
     D(cout.flush() << "--------------Connection::read(" << numBytes << "):read " << rcvd << " bytes\n";)
@@ -149,7 +166,10 @@ int Connection::write(int numBytes, unsigned char* buffer)
   if (numBytesSent == WRITE_ERROR)
     throw ConnectionWriteException((std::string)"Connection::write():error: " + strerror(errno));
   D(cout.flush() << "--------------Connection::write(" << numBytes << "):wrote " << numBytesSent << "bytes\n";)
+  if (numBytesSent == numBytes)
     return numBytesSent;
+  else
+    throw ConnectionWriteException((std::string)"Connection::write(): Incomplete send");
 }
 
 ostream& operator<< (ostream& os, const Connection& c)
