@@ -342,8 +342,7 @@ int Packet::endCRC32()
   uLong crc = crc32(initCrc, this->buffer + this->crcHeadOffset, crcLength);
   if (crc == initCrc)
   {
-    E("Packet::endCRC32():error:updated crc matches initial (null) crc\n");
-    return -1;
+    D(cout.flush() << "Packet::endCRC32():error:updated crc matches initial (null) crc\n";)
   }
   D(cout.flush() << "Packet::endCRC32():unsigned crc:" << crc << "\n";)
   int signedCrc = (int)crc;
