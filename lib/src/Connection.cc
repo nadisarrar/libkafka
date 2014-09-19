@@ -81,36 +81,18 @@ int Connection::open()
   if (socketFd == -1)
     throw ConnectionOpenException((std::string)"Connection::open():socket error: " + strerror(errno));
 
-  struct timeval  timeout;
-  timeout.tv_sec = 10;
-  timeout.tv_usec = 0;
-  fd_set set;
-  FD_ZERO(&set);
-  FD_SET(this->socketFd, &set);
-  fcntl(this->socketFd, F_SETFL, O_NONBLOCK);
-
-  D(cout.flush() << "--------------Connection::open():connect\n";)
-  status = connect(socketFd, this->host_info_list->ai_addr, this->host_info_list->ai_addrlen);
-  if ((status == -1) && (errno != EINPROGRESS))
-    throw ConnectionOpenException((std::string)"Connection::open():open error: " + strerror(errno));
-
-  status = select(this->socketFd+1, NULL, &set, NULL, &timeout);
-  if (status != 1)
-  {
-    if (status == 0)
-      throw ConnectionOpenException((std::string)"Connection::open(): Connection timed out");
-    else
-      throw ConnectionOpenException((std::string)"Connection::open():select error: " + strerror(errno));
-  }
-  fcntl(this->socketFd, F_SETFL, fcntl(this->socketFd, F_GETFL, 0) & ~O_NONBLOCK);
-
   struct timeval tv;
-  tv.tv_sec = 30;
+  tv.tv_sec = 10;
   tv.tv_usec = 0;
   if (setsockopt(this->socketFd, SOL_SOCKET, SO_RCVTIMEO, (char *)&tv, sizeof(struct timeval)) < 0)
     throw ConnectionOpenException((std::string)"Connection::open():setsockopt1 error: " + strerror(errno));
   if (setsockopt(this->socketFd, SOL_SOCKET, SO_SNDTIMEO, (char *)&tv, sizeof(struct timeval)) < 0)
     throw ConnectionOpenException((std::string)"Connection::open():setsockopt2 error: " + strerror(errno));
+
+  D(cout.flush() << "--------------Connection::open():connect\n";)
+  status = connect(socketFd, this->host_info_list->ai_addr, this->host_info_list->ai_addrlen);
+  if ((status == -1) && (errno != EINPROGRESS))
+    throw ConnectionOpenException((std::string)"Connection::open():open error: " + strerror(errno));
 
   D(cout.flush() << "--------------Connection::open():connected\n";)
   return this->socketFd;
