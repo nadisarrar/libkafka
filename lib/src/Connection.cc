@@ -145,7 +145,12 @@ int Connection::read(int numBytes, unsigned char* buffer)
   {
     int rcvd = (int)::recv(this->socketFd, p, (size_t)(numBytes-numBytesReceived), flags);
     if (rcvd == READ_ERROR)
-      throw ConnectionReadException((std::string)"Connection::read():error: " + strerror(errno));
+    {
+      if (errno == EAGAIN || errno == EINTR)
+        continue;
+      else
+        throw ConnectionReadException((std::string)"Connection::read():error: " + strerror(errno));
+    }
     if (rcvd == 0)
       throw ConnectionReadException((std::string)"Connection::read(): Connection closed");
     p += rcvd;
@@ -161,15 +166,22 @@ int Connection::write(int numBytes, unsigned char* buffer)
 {
   D(cout.flush() << "--------------Connection::write(" << numBytes << ")\n";)
 
-    int flags = MSG_NOSIGNAL;
-  int numBytesSent = (int)::send(this->socketFd, (const void*)buffer, (ssize_t)numBytes, flags);
-  if (numBytesSent == WRITE_ERROR)
-    throw ConnectionWriteException((std::string)"Connection::write():error: " + strerror(errno));
-  D(cout.flush() << "--------------Connection::write(" << numBytes << "):wrote " << numBytesSent << "bytes\n";)
-  if (numBytesSent == numBytes)
+  int flags = MSG_NOSIGNAL;
+  while (true)
+  {
+    int numBytesSent = (int)::send(this->socketFd, (const void*)buffer, (ssize_t)numBytes, flags);
+    if (numBytesSent == WRITE_ERROR)
+    {
+      if (errno == EAGAIN || errno == EINTR)
+        continue;
+      else
+        throw ConnectionWriteException((std::string)"Connection::write():error: " + strerror(errno));
+    }
+    D(cout.flush() << "--------------Connection::write(" << numBytes << "):wrote " << numBytesSent << "bytes\n";)
+    if (numBytesSent != numBytes)
+      throw ConnectionWriteException((std::string)"Connection::write(): Incomplete send");
     return numBytesSent;
-  else
-    throw ConnectionWriteException((std::string)"Connection::write(): Incomplete send");
+  }
 }
 
 ostream& operator<< (ostream& os, const Connection& c)
